@@ -37,7 +37,7 @@ class DialogUtils {
                         4 -> com.brianml31.insta_moon.InstagramMainActivity.requestFileToRestore(instagramMainActivity)
                         5 -> {
                             if (FileUtils.deleteMCOverrides(ctx)) {
-                                ToastUtils.showShortToast(ctx, "Commands successfully cleaned")
+                                ToastUtils.showShortToast(ctx, "Developer mode settings successfully cleared")
                             } else {
                                 ToastUtils.showShortToast(ctx, "Error clearing commands")
                             }
@@ -91,7 +91,7 @@ class DialogUtils {
             val items = arrayOf("Disable Ads", "Disable analytics")
             val checkedItemsArray = booleanArrayOf(false, false)
             val checkedItems = PrefsUtils.loadPreferencesExtraOptions(ctx, checkedItemsArray)
-            val alertDialog = buildAlertDialog(ctx, "EXTRA OPTIONS ⚙")
+            val alertDialog = buildAlertDialog(ctx, "EXTRA OPTIONS ⚙\uFE0F")
 
             alertDialog.setMultiChoiceItems(items, checkedItems, object : DialogInterface.OnMultiChoiceClickListener {
                 override fun onClick(dialog: DialogInterface, which: Int, isChecked: Boolean) {
@@ -173,8 +173,8 @@ class DialogUtils {
         }
 
         private fun showAboutAppDialogDialog(ctx: Context) {
-            val alertDialog = buildAlertDialog(ctx, "ABOUT THE APP")
-            alertDialog.setMessage("InstaMoon \uD83C\uDF19\n\nVersion:"+Utils.getVersionName(ctx)+"\n\n⭒Developed by brianml31⭒\n\nThanks to:\n⋆ Monserrat")
+            val alertDialog = buildAlertDialog(ctx, "ABOUT THE APP \uD83D\uDCF1")
+            alertDialog.setMessage("InstaMoon \uD83C\uDF19 "+Constants.VERSION+"\n\n⭒Developed by brianml31⭒\n\nBased on version: "+Utils.getVersionName(ctx)+"\n\nThanks to:\n⋆ Monserrat")
             alertDialog.setNeutralButton("CHECK UPDATE", object : DialogInterface.OnClickListener {
                 override fun onClick(dialog: DialogInterface, which: Int) {
                     val updateTask = UpdateTask(ctx)

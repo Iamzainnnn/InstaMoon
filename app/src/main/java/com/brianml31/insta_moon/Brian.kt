@@ -3,7 +3,6 @@ package com.brianml31.insta_moon
 import android.app.Application
 import android.content.Context
 import android.util.Base64
-import android.util.Log
 import com.brianml31.insta_moon.utils.PrefsUtils
 import java.io.IOException
 import java.net.URI
@@ -29,7 +28,7 @@ class Brian {
         }
 
         fun disableAds(): Boolean {
-            return PrefsUtils.getBoolean("disable_ads", false)
+            return PrefsUtils.getBoolean(PrefsUtils.getKeysPreferences(3), false)
         }
 
         fun validateUriHost(uri: URI) {
@@ -46,11 +45,10 @@ class Brian {
                     }
                 }
                 if (uriPath.contains("graph.instagram.com") || uriPath.contains("graph.facebook.com") || uriPath.contains("/logging_client_events")) {
-                    if (PrefsUtils.getBoolean(PrefsUtils.getKeysPreferences(3), false)) {
+                    if (PrefsUtils.getBoolean(PrefsUtils.getKeysPreferences(4), false)) {
                         throw IOException("URL has no host")
                     }
                 }
-                Log.i("BRIAN", uriPath)
             }
         }
 

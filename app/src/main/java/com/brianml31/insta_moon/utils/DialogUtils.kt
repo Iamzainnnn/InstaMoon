@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.DialogInterface
 import android.os.Environment
 import android.widget.EditText
+import com.brianml31.insta_moon.Brian
 import com.instagram.mainactivity.InstagramMainActivity
 import java.io.File
 import java.text.SimpleDateFormat
@@ -25,23 +26,24 @@ class DialogUtils {
 
         fun showInstaMoonOptionsDialog(ctx: Context, instagramMainActivity: InstagramMainActivity) {
             val alertDialog = buildAlertDialog(ctx, "INSTA MOON \uD83C\uDF19")
-            val options = arrayOf("Ghost Mode", "Open Developer Mode", "Export Developer Mode Settings", "Import Developer Mode Settings", "Clear Developer Mode Settings", "Save File (id_name_mapping.json)", "About the App")
+            val options = arrayOf("Ghost Mode", "Extra options", "Open Developer Mode", "Export Developer Mode Settings", "Import Developer Mode Settings", "Clear Developer Mode Settings", "Save File (id_name_mapping.json)", "About the App")
             alertDialog.setItems(options, object : DialogInterface.OnClickListener {
                 override fun onClick(dialog: DialogInterface, which: Int) {
                     when (which) {
                         0 -> showGhostModeDialog(ctx)
-                        1 -> DeveloperUtils.openDeveloperMode(ctx, instagramMainActivity)
-                        2 -> FileUtils.exportDevSettingsV2(ctx)
-                        3 -> com.brianml31.insta_moon.InstagramMainActivity.requestFileToRestore(instagramMainActivity)
-                        4 -> {
+                        1 -> showExtraOptionsDialog(ctx)
+                        2 -> DeveloperUtils.openDeveloperMode(ctx, instagramMainActivity)
+                        3 -> FileUtils.exportDevSettingsV2(ctx)
+                        4 -> com.brianml31.insta_moon.InstagramMainActivity.requestFileToRestore(instagramMainActivity)
+                        5 -> {
                             if (FileUtils.deleteMCOverrides(ctx)) {
                                 ToastUtils.showShortToast(ctx, "Commands successfully cleaned")
                             } else {
                                 ToastUtils.showShortToast(ctx, "Error clearing commands")
                             }
                         }
-                        5 -> FileUtils.saveFileIdNameMapping(ctx)
-                        6 -> showAboutAppDialogDialog(ctx)
+                        6 -> FileUtils.saveFileIdNameMapping(ctx)
+                        7 -> showAboutAppDialogDialog(ctx)
                     }
                 }
             })
@@ -57,8 +59,9 @@ class DialogUtils {
         }
 
         fun showGhostModeDialog(ctx: Context) {
-            val items = arrayOf("Hide Seen in Stories", "Hide Seen in Messages", "Hide Seen in Live Videos", "Disable Analytics")
-            val checkedItems = PrefsUtils.loadPreferences(ctx)
+            val items = arrayOf("Hide Seen in Stories", "Hide Seen in Messages", "Hide Seen in Live Videos")
+            val checkedItemsArray = booleanArrayOf(false, false, false)
+            val checkedItems = PrefsUtils.loadPreferencesGhostMode(ctx, checkedItemsArray)
             val alertDialog = buildAlertDialog(ctx, "GHOST MODE 👻")
 
             alertDialog.setMultiChoiceItems(items, checkedItems, object : DialogInterface.OnMultiChoiceClickListener {
@@ -75,7 +78,36 @@ class DialogUtils {
 
             alertDialog.setPositiveButton("SAVE", object : DialogInterface.OnClickListener {
                 override fun onClick(dialog: DialogInterface, which: Int) {
-                    PrefsUtils.savePreferences(ctx, checkedItems)
+                    PrefsUtils.savePreferencesGhostMode(ctx, checkedItems)
+                    showRestartAppDialog(ctx)
+                }
+            })
+
+            alertDialog.create()
+            alertDialog.show()
+        }
+
+        fun showExtraOptionsDialog(ctx: Context) {
+            val items = arrayOf("Disable Ads", "Disable analytics")
+            val checkedItemsArray = booleanArrayOf(false, false)
+            val checkedItems = PrefsUtils.loadPreferencesExtraOptions(ctx, checkedItemsArray)
+            val alertDialog = buildAlertDialog(ctx, "EXTRA OPTIONS ⚙")
+
+            alertDialog.setMultiChoiceItems(items, checkedItems, object : DialogInterface.OnMultiChoiceClickListener {
+                override fun onClick(dialog: DialogInterface, which: Int, isChecked: Boolean) {
+                    checkedItems[which] = isChecked
+                }
+            })
+
+            alertDialog.setNegativeButton("CLOSE", object : DialogInterface.OnClickListener {
+                override fun onClick(dialog: DialogInterface, which: Int) {
+                    dialog.dismiss()
+                }
+            })
+
+            alertDialog.setPositiveButton("SAVE", object : DialogInterface.OnClickListener {
+                override fun onClick(dialog: DialogInterface, which: Int) {
+                    PrefsUtils.savePreferencesExtraOptions(ctx, checkedItems)
                     showRestartAppDialog(ctx)
                 }
             })
@@ -146,12 +178,12 @@ class DialogUtils {
             alertDialog.setNeutralButton("CHECK UPDATE", object : DialogInterface.OnClickListener {
                 override fun onClick(dialog: DialogInterface, which: Int) {
                     val updateTask = UpdateTask(ctx)
-                    updateTask.execute(Constants.VERSION_CHECK_URL)
+                    updateTask.execute(Brian.decodeBase64(Constants.VERSION_CHECK_URL))
                 }
             })
             alertDialog.setNegativeButton("GITHUB", object : DialogInterface.OnClickListener {
                 override fun onClick(dialog: DialogInterface, which: Int) {
-                    Utils.openLink(ctx, Constants.GITHUB_URL)
+                    Utils.openLink(ctx, Brian.decodeBase64(Constants.GITHUB_URL))
                 }
             })
             alertDialog.setPositiveButton("CLOSE", object : DialogInterface.OnClickListener {

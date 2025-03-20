@@ -2,6 +2,7 @@ package com.brianml31.insta_moon
 
 import android.app.Application
 import android.content.Context
+import android.util.Base64
 import android.util.Log
 import com.brianml31.insta_moon.utils.PrefsUtils
 import java.io.IOException
@@ -19,8 +20,16 @@ class Brian {
             ctx = application.applicationContext
         }
 
+        fun decodeBase64(encodedString: String): String {
+            return String(Base64.decode(encodedString, Base64.DEFAULT))
+        }
+
         fun hideSeenDM(): Boolean {
             return PrefsUtils.getBoolean(PrefsUtils.getKeysPreferences(1), false)
+        }
+
+        fun disableAds(): Boolean {
+            return PrefsUtils.getBoolean("disable_ads", false)
         }
 
         fun validateUriHost(uri: URI) {

@@ -23,17 +23,25 @@ public class KotlinInvoker {
         Brian.Companion.setCtx(application);
     }
 
+    public static void validateUriHostKotlin(URI uri){
+        Brian.Companion.validateUriHost(uri);
+    }
+
     public static void hideSeen(){
         if(Brian.Companion.hideSeenDM()){
             return;
         }else{
             Log.i("","mark_thread_seen-");
         }
-
     }
 
-    public static void validateUriHostKotlin(URI uri){
-        Brian.Companion.validateUriHost(uri);
+    public static boolean disableAds(){
+        if(Brian.Companion.disableAds()){
+            return false;
+        }else{
+            Log.i("","SponsoredContentController.insertItem");
+            return true;
+        }
     }
 
     public static void after_onActivityResultKotlin(Activity activity, int requestCode, int resultCode, Intent data){

@@ -1,16 +1,16 @@
 name: Build Modified Instagram APK
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:  # Manually trigger karne ke liye
   push:
     branches:
-      - main
+      - main  # Make sure yeh tumhare default branch se match kare
   pull_request:
     branches:
       - main
 
 permissions:
-  contents: write
+  contents: write  # Forked repos me workflows enable karne ke liye zaroori hai
 
 jobs:
   build:
@@ -29,7 +29,7 @@ jobs:
       - name: Install APKTool & Dependencies
         run: |
           sudo apt update
-          sudo apt install -y zipalign
+          sudo apt install -y zipalign wget
           wget https://raw.githubusercontent.com/iBotPeaches/Apktool/master/scripts/linux/apktool -O /usr/local/bin/apktool
           chmod +x /usr/local/bin/apktool
           wget https://raw.githubusercontent.com/iBotPeaches/Apktool/master/scripts/linux/apktool.jar -O /usr/local/bin/apktool.jar
@@ -76,4 +76,3 @@ jobs:
         with:
           name: Modified-Instagram-APK
           path: Instagram_Mod_Aligned.apk
-          

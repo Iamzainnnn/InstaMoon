@@ -1,0 +1,79 @@
+name: Build Modified Instagram APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup JDK
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Install APKTool & Dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y zipalign
+          wget https://raw.githubusercontent.com/iBotPeaches/Apktool/master/scripts/linux/apktool -O /usr/local/bin/apktool
+          chmod +x /usr/local/bin/apktool
+          wget https://raw.githubusercontent.com/iBotPeaches/Apktool/master/scripts/linux/apktool.jar -O /usr/local/bin/apktool.jar
+
+      - name: Grant execute permission to Gradle wrapper
+        run: chmod +x ./gradlew
+
+      - name: Build InstaMoon APK
+        run: ./gradlew assembleDebug
+
+      - name: Extract Smali Code from InstaMoon
+        run: |
+          apktool d -f -o InstaMoon_Smali app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Decompile Instagram APK
+        run: |
+          apktool d -f -o Instagram_Smali base.apk
+
+      - name: Merge InstaMoon Smali into Instagram
+        run: |
+          cp -r InstaMoon_Smali/smali/* Instagram_Smali/smali/
+
+      - name: Rebuild Modified Instagram APK
+        run: |
+          apktool b Instagram_Smali -o Instagram_Mod.apk
+
+      - name: Generate Debug Keystore
+        run: |
+          keytool -genkey -v -keystore debug.keystore -storepass android -keypass android -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+
+      - name: Sign APK with Debug Keystore
+        run: |
+          jarsigner -verbose -sigalg SHA1withRSA -digestalg SHA1 \
+            -keystore debug.keystore -storepass android \
+            -keypass android \
+            Instagram_Mod.apk androiddebugkey
+
+      - name: Optimize APK (Zipalign)
+        run: |
+          zipalign -v 4 Instagram_Mod.apk Instagram_Mod_Aligned.apk
+
+      - name: Upload Modified Instagram APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Modified-Instagram-APK
+          path: Instagram_Mod_Aligned.apk
+          

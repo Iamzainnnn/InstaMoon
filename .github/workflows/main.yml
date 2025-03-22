@@ -47,7 +47,7 @@ jobs:
 
       - name: Decompile Instagram APK
         run: |
-          java -jar APKEditor.jar d -i base.apk -o Instagram_Smali --api 30
+          java -jar APKEditor.jar d -i base.apk -o Instagram_Smali
 
       - name: Merge InstaMoon Smali into Instagram
         run: |
@@ -59,7 +59,7 @@ jobs:
 
       - name: Rebuild Modified Instagram APK
         run: |
-          java -jar APKEditor.jar b -i Instagram_Smali -o Instagram_Mod.apk --api 30
+          java -jar APKEditor.jar b -i Instagram_Smali -o Instagram_Mod.apk
 
       - name: Sign APK with Debug Keystore
         run: |

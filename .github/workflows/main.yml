@@ -1,4 +1,4 @@
-name: Build Modified Instagram APK
+name: Build and Upload Modified Instagram APK
 
 on:
   workflow_dispatch:
@@ -53,10 +53,6 @@ jobs:
         run: |
           rsync -av InstaMoon_Smali/smali/ Instagram_Smali/smali/
 
-      - name: Rebuild Smali
-        run: |
-          java -jar smali.jar assemble -o Instagram_Smali/classes.dex Instagram_Smali/smali/
-
       - name: Rebuild Modified Instagram APK
         run: |
           java -jar APKEditor.jar b -i Instagram_Smali -o Instagram_Mod.apk
@@ -73,15 +69,30 @@ jobs:
         run: |
           zipalign -v 4 Instagram_Mod.apk Instagram_Mod_Aligned.apk
 
-      - name: Upload Modified Instagram APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: Modified-Instagram-APK
-          path: Instagram_Mod_Aligned.apk
-
-      - name: Send APK to Telegram
+      - name: Upload to Bitbucket
+        env:
+          BITBUCKET_USERNAME: ${{ secrets.BITBUCKET_USERNAME }}
+          BITBUCKET_APP_PASSWORD: ${{ secrets.BITBUCKET_APP_PASSWORD }}
         run: |
-          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendDocument" \
-          -F "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
-          -F "document=@Instagram_Mod_Aligned.apk" \
-          -F "caption=🚀 Modified Instagram APK is ready!"
+          UPLOAD_URL="https://api.bitbucket.org/2.0/repositories/YOUR_USERNAME/YOUR_REPO/downloads/"
+          curl -X POST "$UPLOAD_URL" \
+          --user "$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD" \
+          --header "Content-Type: multipart/form-data" \
+          --form files=@Instagram_Mod_Aligned.apk | tee upload_response.json
+
+      - name: Extract Download Link
+        id: extract_link
+        run: |
+          DOWNLOAD_LINK="https://bitbucket.org/iamzainnnn/instamoon/downloads/Instagram_Mod_Aligned.apk"
+          echo "DOWNLOAD_LINK=$DOWNLOAD_LINK" >> $GITHUB_ENV
+
+      - name: Send Download Link to Telegram
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
+          -H "Content-Type: application/x-www-form-urlencoded" \
+          --data-urlencode "chat_id=$TELEGRAM_CHAT_ID" \
+          --data-urlencode "text=🚀 *Modified Instagram APK is Ready!*\n\n🔗 [Download Here]($DOWNLOAD_LINK)" \
+          --data-urlencode "parse_mode=Markdown"

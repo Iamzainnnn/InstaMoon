@@ -29,7 +29,7 @@ jobs:
 
       - name: Download APKEditor
         run: |
-          wget -O APKEditor.jar "https://github.com/REAndroid/APKEditor/releases/latest/download/APKEditor.jar"
+          wget -O APKEditor.jar "https://github.com/REAndroid/APKEditor/releases/latest/download/APKEditor-1.4.2.jar"
 
       - name: Download smali & baksmali (Prebuilt)
         run: |

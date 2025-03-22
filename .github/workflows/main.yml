@@ -80,6 +80,9 @@ jobs:
           path: Instagram_Mod_Aligned.apk
 
       - name: Send APK to Telegram
+        run:      - name: Send APK to Telegram
         run: |
-          curl -F document=@Instagram_Mod_Aligned.apk \
-          "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendDocument?chat_id=${{ secrets.TELEGRAM_CHAT_ID }}&caption=🚀 Modified Instagram APK is ready!"
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendDocument" \
+          -F "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
+          -F "document=@Instagram_Mod_Aligned.apk" \
+          -F "caption=🚀 Modified Instagram APK is ready!"

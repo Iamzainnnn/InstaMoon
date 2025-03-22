@@ -45,7 +45,7 @@ jobs:
         run: |
           java -jar APKEditor.jar d -i app/build/outputs/apk/debug/app-debug.apk -o InstaMoon_Smali
 
-      - name: Decompile Instagram APK using APKEditor
+      - name: Decompile Instagram APK
         run: |
           java -jar APKEditor.jar d -i base.apk -o Instagram_Smali
 
@@ -53,7 +53,7 @@ jobs:
         run: |
           rsync -av InstaMoon_Smali/smali/ Instagram_Smali/smali/
 
-      - name: Recompile Merged APK using APKEditor
+      - name: Rebuild Modified Instagram APK
         run: |
           java -jar APKEditor.jar b -i Instagram_Smali -o Instagram_Mod.apk
 
@@ -76,6 +76,9 @@ jobs:
           path: Instagram_Mod_Aligned.apk
 
       - name: Upload Modified Instagram APK to Telegram
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           curl -F document=@Instagram_Mod_Aligned.apk \
-          "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendDocument?chat_id=${{ secrets.TELEGRAM_CHAT_ID }}&caption=Modified Instagram APK is ready! 🚀"
+          "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendDocument?chat_id=$TELEGRAM_CHAT_ID&caption=Modified Instagram APK is ready! 🚀"

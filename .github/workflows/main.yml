@@ -20,20 +20,16 @@ jobs:
       - name: Install Dependencies
         run: |
           sudo apt update
-          sudo apt install -y zipalign wget rsync curl unzip git gradle
+          sudo apt install -y zipalign wget rsync curl unzip git
 
       - name: Download APKEditor
         run: |
-          wget -O APKEditor.jar "https://github.com/REAndroid/APKEditor/releases/download/V1.4.2/APKEditor-1.4.2.jar"
+          wget -O APKEditor.jar "https://github.com/REAndroid/APKEditor/releases/latest/download/APKEditor-1.4.2.jar"
 
-      - name: Clone & Build smali/baksmali from Source
+      - name: Download smali & baksmali (Prebuilt)
         run: |
-          git clone https://github.com/JesusFreke/smali.git
-          cd smali
-          ./gradlew assemble
-          cp baksmali/build/libs/baksmali.jar ../baksmali.jar
-          cp smali/build/libs/smali.jar ../smali.jar
-          cd ..
+          wget -O smali.jar "https://bitbucket.org/JesusFreke/smali/downloads/smali-2.5.2.jar"
+          wget -O baksmali.jar "https://bitbucket.org/JesusFreke/smali/downloads/baksmali-2.5.2.jar"
 
       - name: Download Instagram APK (base.apk)
         run: |

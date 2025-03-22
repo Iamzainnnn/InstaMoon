@@ -1,4 +1,4 @@
-name: Build Modified Instagram APK
+name: Build InstaMoon APK
 
 on:
   workflow_dispatch:
@@ -18,48 +18,13 @@ jobs:
           java-version: '17'
 
       - name: Install Dependencies
-        run: |
-          sudo apt update
-          sudo apt install -y zipalign wget rsync curl unzip git
+        run: sudo apt update && sudo apt install -y zipalign wget rsync curl unzip git
 
       - name: Give Gradle Execute Permission
         run: chmod +x gradlew
 
-      - name: Download APKEditor
-        run: |
-          wget -O APKEditor.jar "https://github.com/REAndroid/APKEditor/releases/latest/download/APKEditor-1.4.2.jar"
-
-      - name: Download smali & baksmali (Prebuilt)
-        run: |
-          wget -O smali.jar "https://bitbucket.org/JesusFreke/smali/downloads/smali-2.5.2.jar"
-          wget -O baksmali.jar "https://bitbucket.org/JesusFreke/smali/downloads/baksmali-2.5.2.jar"
-
-      - name: Download Instagram APK (base.apk)
-        run: |
-          wget -O base.apk "https://pool.apk.aptoide.com/mark8/com-instagram-android-377801080-70229994-9624f50014f00fca9ecf84dd9038587e.apk"
-
       - name: Build InstaMoon APK
         run: ./gradlew assembleDebug
-
-      - name: Extract Smali & Resources from InstaMoon
-        run: |
-          java -jar APKEditor.jar d -i app/build/outputs/apk/debug/app-debug.apk -o InstaMoon_Smali
-
-      - name: Decompile Instagram APK
-        run: |
-          java -jar APKEditor.jar d -i base.apk -o Instagram_Smali
-
-      - name: Merge InstaMoon Smali into Instagram
-        run: |
-          rsync -av InstaMoon_Smali/smali/ Instagram_Smali/smali/
-
-      - name: Rebuild Smali
-        run: |
-          java -jar smali.jar assemble -o Instagram_Smali/classes.dex Instagram_Smali/smali/
-
-      - name: Rebuild Modified Instagram APK
-        run: |
-          java -jar APKEditor.jar b -i Instagram_Smali -o Instagram_Mod.apk
 
       - name: Sign APK with Debug Keystore
         run: |
@@ -67,14 +32,14 @@ jobs:
           jarsigner -verbose -sigalg SHA1withRSA -digestalg SHA1 \
             -keystore debug.keystore -storepass android \
             -keypass android \
-            Instagram_Mod.apk androiddebugkey
+            app/build/outputs/apk/debug/app-debug.apk androiddebugkey
 
       - name: Optimize APK (Zipalign)
         run: |
-          zipalign -v 4 Instagram_Mod.apk Instagram_Mod_Aligned.apk
+          zipalign -v 4 app/build/outputs/apk/debug/app-debug.apk InstaMoon_Aligned.apk
 
-      - name: Upload Modified Instagram APK
+      - name: Upload InstaMoon APK
         uses: actions/upload-artifact@v4
         with:
-          name: Modified-Instagram-APK
-          path: Instagram_Mod_Aligned.apk
+          name: InstaMoon-APK
+          path: InstaMoon_Aligned.apk

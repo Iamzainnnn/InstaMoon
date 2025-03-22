@@ -1,4 +1,4 @@
-name: Build & Upload Modified Instagram APK
+name: Build Modified Instagram APK
 
 on:
   workflow_dispatch:
@@ -73,10 +73,15 @@ jobs:
         run: |
           zipalign -v 4 Instagram_Mod.apk Instagram_Mod_Aligned.apk
 
-      - name: Upload Modified Instagram APK as Artifact
+      - name: Upload Modified Instagram APK
         uses: actions/upload-artifact@v4
         with:
           name: Modified-Instagram-APK
           path: Instagram_Mod_Aligned.apk
 
-      
+      - name: Send APK to Telegram
+        run: |
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendDocument" \
+          -F "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
+          -F "document=@Instagram_Mod_Aligned.apk" \
+          -F "caption=🚀 Modified Instagram APK is ready!"

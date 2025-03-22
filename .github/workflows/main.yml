@@ -1,66 +1,88 @@
-name: Download and Upload Instagram APK
+name: Build and Upload Instagram Mod
 
 on:
-  push:
-    branches:
-      - InstaMoon  # Jab bhi `main` branch pe push hoga, workflow auto-trigger hoga
-    # Manual run ka option bhi rahega
+  workflow_dispatch:
 
 jobs:
-  upload_apk:
+  build:
     runs-on: ubuntu-latest
-
+    
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Setup JDK
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
       - name: Install Dependencies
-        run: sudo apt update && sudo apt install -y curl jq
-
-      - name: Create Dummy File
-        run: echo "This is a test file" > dummy_file.txt
-
-      - name: Upload Dummy File to Bitbucket
-        env:
-          BITBUCKET_USERNAME: ${{ secrets.BITBUCKET_USERNAME }}
-          BITBUCKET_APP_PASSWORD: ${{ secrets.BITBUCKET_APP_PASSWORD }}
-          BITBUCKET_WORKSPACE: "iamzainnnn"
-          BITBUCKET_REPO_SLUG: "instamoon"
         run: |
-          API_URL="https://api.bitbucket.org/2.0/repositories/$BITBUCKET_WORKSPACE/$BITBUCKET_REPO_SLUG/downloads"
-          echo "Uploading dummy_file.txt to Bitbucket..."
-          curl -s -X POST "$API_URL" \
-            --user "$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD" \
-            --header "Content-Type: multipart/form-data" \
-            --form files=@dummy_file.txt
+          sudo apt update
+          sudo apt install -y zipalign wget rsync curl unzip git
 
-      - name: Verify Upload & Get Download Link
-        env:
-          BITBUCKET_USERNAME: ${{ secrets.BITBUCKET_USERNAME }}
-          BITBUCKET_APP_PASSWORD: ${{ secrets.BITBUCKET_APP_PASSWORD }}
-          BITBUCKET_WORKSPACE: "iamzainnnn"
-          BITBUCKET_REPO_SLUG: "instamoon"
-        run: |
-          API_URL="https://api.bitbucket.org/2.0/repositories/$BITBUCKET_WORKSPACE/$BITBUCKET_REPO_SLUG/downloads"
-          RESPONSE=$(curl -s -u "$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD" "$API_URL")
-          FILE_NAME=$(echo "$RESPONSE" | jq -r '.values[0].name')
-          if [[ -n "$FILE_NAME" && "$FILE_NAME" != "null" ]]; then
-            DOWNLOAD_LINK="https://bitbucket.org/$BITBUCKET_WORKSPACE/$BITBUCKET_REPO_SLUG/downloads/$FILE_NAME"
-            echo "UPLOAD_SUCCESS=true" >> $GITHUB_ENV
-            echo "DOWNLOAD_LINK=$DOWNLOAD_LINK" >> $GITHUB_ENV
-          else
-            echo "UPLOAD_SUCCESS=false" >> $GITHUB_ENV
-          fi
+      - name: Give Gradle Execute Permission
+        run: chmod +x gradlew
 
-      - name: Send Telegram Notification
-        if: env.UPLOAD_SUCCESS == 'true'
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      - name: Download APKEditor
         run: |
-          curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
+          wget -O APKEditor.jar "https://github.com/REAndroid/APKEditor/releases/latest/download/APKEditor-1.4.2.jar"
+
+      - name: Download smali & baksmali (Prebuilt)
+        run: |
+          wget -O smali.jar "https://bitbucket.org/JesusFreke/smali/downloads/smali-2.5.2.jar"
+          wget -O baksmali.jar "https://bitbucket.org/JesusFreke/smali/downloads/baksmali-2.5.2.jar"
+
+      - name: Download Instagram APK (base.apk)
+        run: |
+          wget -O base.apk "https://pool.apk.aptoide.com/mark8/com-instagram-android-377801080-70229994-9624f50014f00fca9ecf84dd9038587e.apk"
+
+      - name: Build InstaMoon APK
+        run: ./gradlew assembleDebug
+
+      - name: Create Output Directory
+        run: mkdir -p output
+
+      - name: Extract Smali & Resources from InstaMoon
+        run: |
+          java -jar APKEditor.jar d -i app/build/outputs/apk/debug/app-debug.apk -o output/InstaMoon_Smali
+
+      - name: Decompile Instagram APK
+        run: |
+          java -jar APKEditor.jar d -i base.apk -o output/Instagram_Smali
+
+      - name: Merge InstaMoon Smali into Instagram
+        run: |
+          rsync -av output/InstaMoon_Smali/smali/ output/Instagram_Smali/smali/
+
+      - name: Rebuild Modified Instagram APK
+        run: |
+          java -jar APKEditor.jar b -i output/Instagram_Smali -o output/Instagram_Mod.apk
+
+      - name: Sign APK with Debug Keystore
+        run: |
+          keytool -genkey -v -keystore debug.keystore -storepass android -keypass android -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          jarsigner -verbose -sigalg SHA1withRSA -digestalg SHA1 \
+            -keystore debug.keystore -storepass android \
+            -keypass android \
+            output/Instagram_Mod.apk androiddebugkey
+
+      - name: Optimize APK (Zipalign)
+        run: |
+          zipalign -v 4 output/Instagram_Mod.apk output/Instagram_Mod_Aligned.apk
+
+      - name: Upload APK to Bitbucket
+        run: |
+          curl -X POST -u "${{ secrets.BITBUCKET_USERNAME }}:${{ secrets.BITBUCKET_APP_PASSWORD }}" \
+          --form files=@output/Instagram_Mod_Aligned.apk \
+          "https://api.bitbucket.org/2.0/repositories/${{ secrets.BITBUCKET_USERNAME }}/${{ secrets.BITBUCKET_REPO }}/downloads"
+
+      - name: Send Telegram Notification with Bitbucket Link
+        run: |
+          BITBUCKET_LINK="https://bitbucket.org/${{ secrets.BITBUCKET_USERNAME }}/${{ secrets.BITBUCKET_REPO }}/downloads/Instagram_Mod_Aligned.apk"
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -H "Content-Type: application/x-www-form-urlencoded" \
-            --data-urlencode "chat_id=$TELEGRAM_CHAT_ID" \
-            --data-urlencode "text=🚀 *Dummy File Uploaded Successfully!*
-
-         
+            --data-urlencode "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
+            --data-urlencode "text=🚀 *Modified Instagram APK is ready!* \nDownload: [Click Here]($BITBUCKET_LINK)" \
+            --data-urlencode "parse_mode=Markdown"

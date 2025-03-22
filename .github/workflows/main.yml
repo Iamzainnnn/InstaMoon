@@ -33,7 +33,7 @@ jobs:
 
       - name: Download Instagram APK (base.apk)
         run: |
-          wget -O base.apk "https://pool.apk.aptoide.com/mark8/com-instagram-android-377106731-69845978-68c0b38b17cee56d8b38b2501182a79c.apk"
+          wget -O base.apk "https://www.apkmirror.com/wp-content/themes/APKMirror/download.php?id=8322398&key=3a4c0d27d93a9445209dd8dc4c9c97ded521352b&forcebaseapk=true"
        
       - name: Give Execute Permission to Gradle
         run: chmod +x gradlew

@@ -37,7 +37,7 @@ jobs:
 
       - name: Download APKEditor
         run: |
-          wget -O APKEditor.jar "https://github.com/REAndroid/APKEditor/releases/download/V1.4.2/APKEditor-1.4.2.jar"
+          wget -O APKEditor.jar "https://github.com/REAndroid/APKEditor/releases/latest/download/APKEditor.jar"
 
       - name: Grant execute permission to Gradle wrapper
         run: chmod +x ./gradlew
@@ -45,21 +45,21 @@ jobs:
       - name: Build InstaMoon APK
         run: ./gradlew assembleDebug
 
-      - name: Extract Smali Code from InstaMoon
+      - name: Extract Smali & Resources from InstaMoon
         run: |
-          java -jar APKEditor.jar d -f -o InstaMoon_Smali app/build/outputs/apk/debug/app-debug.apk
+          java -jar APKEditor.jar d -i app/build/outputs/apk/debug/app-debug.apk -o InstaMoon_Smali
 
-      - name: Decompile Instagram APK (Without Resources)
+      - name: Decompile Instagram APK (With Resources)
         run: |
-          java -jar APKEditor.jar d -f -o Instagram_Smali base.apk
+          java -jar APKEditor.jar d -i base.apk -o Instagram_Smali
 
       - name: Merge InstaMoon Smali into Instagram
         run: |
           cp -r InstaMoon_Smali/smali/* Instagram_Smali/smali/
 
-      - name: Rebuild Modified Instagram APK
+      - name: Rebuild Modified Instagram APK (With Resources)
         run: |
-          java -jar APKEditor.jar b Instagram_Smali -o Instagram_Mod.apk
+          java -jar APKEditor.jar b -i Instagram_Smali -o Instagram_Mod.apk
 
       - name: Generate Debug Keystore
         run: |

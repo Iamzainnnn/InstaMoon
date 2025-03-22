@@ -34,6 +34,9 @@ jobs:
       - name: Download Instagram APK (base.apk)
         run: |
           wget -O base.apk "https://pool.apk.aptoide.com/mark8/com-instagram-android-377801080-70229994-9624f50014f00fca9ecf84dd9038587e.apk"
+       
+      - name: Give Execute Permission to Gradle
+        run: chmod +x gradlew
 
       - name: Build InstaMoon APK
         run: ./gradlew assembleDebug

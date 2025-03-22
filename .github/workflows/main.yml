@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - InstaMoon  # Jab bhi `main` branch pe push hoga, workflow auto-trigger hoga
-  workflow_dispatch:  # Manual run ka option bhi rahega
+    # Manual run ka option bhi rahega
 
 jobs:
   upload_apk:

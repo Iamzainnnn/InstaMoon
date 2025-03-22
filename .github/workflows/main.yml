@@ -3,7 +3,7 @@ name: Build, Upload & Auto-Cleanup APK
 on:
   push:
     branches:
-      - main
+      - InstaMoon
 
 jobs:
   build-upload:

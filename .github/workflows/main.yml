@@ -1,16 +1,16 @@
 name: Build Modified Instagram APK
 
 on:
-  workflow_dispatch:  # Manually trigger karne ke liye
+  workflow_dispatch:
   push:
     branches:
-      - main  # Make sure yeh tumhare default branch se match kare
+      - main
   pull_request:
     branches:
       - main
 
 permissions:
-  contents: write  # Forked repos me workflows enable karne ke liye zaroori hai
+  contents: write
 
 jobs:
   build:
@@ -30,12 +30,12 @@ jobs:
         run: |
           sudo apt update
           sudo apt install -y zipalign wget
-          
-          # APKTool script install
+
+          # Install APKTool script
           wget https://raw.githubusercontent.com/iBotPeaches/Apktool/master/scripts/linux/apktool -O /usr/local/bin/apktool
           chmod +x /usr/local/bin/apktool
 
-          # Latest APKTool.jar download
+          # Download latest APKTool.jar
           LATEST_APKTOOL=$(curl -s https://api.github.com/repos/iBotPeaches/Apktool/releases/latest | grep "browser_download_url.*apktool_[0-9.]*\\.jar" | cut -d '"' -f 4)
           wget "$LATEST_APKTOOL" -O /usr/local/bin/apktool.jar
           chmod +x /usr/local/bin/apktool.jar
@@ -43,7 +43,7 @@ jobs:
       - name: Download Instagram APK (base.apk)
         run: |
           wget -O base.apk "https://pool.apk.aptoide.com/mark8/com-instagram-android-377801080-70229994-9624f50014f00fca9ecf84dd9038587e.apk"
-          
+
       - name: Grant execute permission to Gradle wrapper
         run: chmod +x ./gradlew
 
@@ -52,11 +52,11 @@ jobs:
 
       - name: Extract Smali Code from InstaMoon
         run: |
-          apktool d -f -o InstaMoon_Smali app/build/outputs/apk/debug/app-debug.apk
+          apktool d -f --no-res -o InstaMoon_Smali app/build/outputs/apk/debug/app-debug.apk
 
-      - name: Decompile Instagram APK
+      - name: Decompile Instagram APK (Without Resources)
         run: |
-          apktool d -f -o Instagram_Smali base.apk
+          apktool d -f --no-res -o Instagram_Smali base.apk
 
       - name: Merge InstaMoon Smali into Instagram
         run: |

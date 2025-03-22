@@ -1,75 +1,24 @@
-name: Build and Upload Modified Instagram APK
+name: Download and Upload Instagram APK
 
 on:
   push:
     branches:
-      - InstaMoon
+      - InstaMoon  # Jab bhi `main` branch pe push hoga, workflow auto-trigger hoga
+  workflow_dispatch:  # Manual run ka option bhi rahega
 
 jobs:
-  build:
+  upload_apk:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup JDK
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
       - name: Install Dependencies
-        run: |
-          sudo apt update
-          sudo apt install -y zipalign wget rsync curl unzip git jq
+        run: sudo apt update && sudo apt install -y curl jq
 
-      - name: Give Gradle Execute Permission
-        run: chmod +x gradlew
-
-      - name: Download APKEditor
-        run: |
-          wget -O APKEditor.jar "https://github.com/REAndroid/APKEditor/releases/latest/download/APKEditor-1.4.2.jar"
-
-      - name: Download smali & baksmali (Prebuilt)
-        run: |
-          wget -O smali.jar "https://bitbucket.org/JesusFreke/smali/downloads/smali-2.5.2.jar"
-          wget -O baksmali.jar "https://bitbucket.org/JesusFreke/smali/downloads/baksmali-2.5.2.jar"
-
-      - name: Download Instagram APK (base.apk)
-        run: |
-          wget -O base.apk "https://pool.apk.aptoide.com/mark8/com-instagram-android-377801080-70229994-9624f50014f00fca9ecf84dd9038587e.apk"
-
-      - name: Build InstaMoon APK
-        run: ./gradlew assembleDebug
-
-      - name: Extract Smali & Resources from InstaMoon
-        run: |
-          java -jar APKEditor.jar d -i app/build/outputs/apk/debug/app-debug.apk -o InstaMoon_Smali
-
-      - name: Decompile Instagram APK
-        run: |
-          java -jar APKEditor.jar d -i base.apk -o Instagram_Smali
-
-      - name: Merge InstaMoon Smali into Instagram
-        run: |
-          rsync -av InstaMoon_Smali/smali/ Instagram_Smali/smali/
-
-      - name: Rebuild Modified Instagram APK
-        run: |
-          java -jar APKEditor.jar b -i Instagram_Smali -o Instagram_Mod.apk
-
-      - name: Sign APK with Debug Keystore
-        run: |
-          keytool -genkey -v -keystore debug.keystore -storepass android -keypass android -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
-          jarsigner -verbose -sigalg SHA1withRSA -digestalg SHA1 \
-            -keystore debug.keystore -storepass android \
-            -keypass android \
-            Instagram_Mod.apk androiddebugkey
-
-      - name: Optimize APK (Zipalign)
-        run: |
-          zipalign -v 4 Instagram_Mod.apk Instagram_Mod_Aligned.apk
+      - name: Download Instagram APK
+        run: wget -O Instagram_Mod_Aligned.apk "https://pool.apk.aptoide.com/mark8/com-instagram-android-377801080-70229994-9624f50014f00fca9ecf84dd9038587e.apk"
 
       - name: Upload to Bitbucket
         env:
@@ -79,53 +28,38 @@ jobs:
           BITBUCKET_REPO_SLUG: "instamoon"
         run: |
           API_URL="https://api.bitbucket.org/2.0/repositories/$BITBUCKET_WORKSPACE/$BITBUCKET_REPO_SLUG/downloads"
-
-          RESPONSE=$(curl -s -X POST "$API_URL" \
+          echo "Uploading Instagram_Mod_Aligned.apk to Bitbucket..."
+          curl -s -X POST "$API_URL" \
             --user "$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD" \
             --header "Content-Type: multipart/form-data" \
-            --form files=@Instagram_Mod_Aligned.apk)
+            --form files=@Instagram_Mod_Aligned.apk
 
-          echo "Upload Response: $RESPONSE"
-
-          # Verify if upload was successful
-          if echo "$RESPONSE" | jq -e '.error' >/dev/null; then
-            echo "❌ Upload Failed!"
-            echo "UPLOAD_SUCCESS=false" >> $GITHUB_ENV
-          else
-            echo "✅ Upload Successful!"
-            echo "UPLOAD_SUCCESS=true" >> $GITHUB_ENV
-          fi
-
-      - name: Extract & Send Download Link to Telegram
+      - name: Verify Upload & Get Download Link
         env:
           BITBUCKET_USERNAME: ${{ secrets.BITBUCKET_USERNAME }}
           BITBUCKET_APP_PASSWORD: ${{ secrets.BITBUCKET_APP_PASSWORD }}
           BITBUCKET_WORKSPACE: "iamzainnnn"
           BITBUCKET_REPO_SLUG: "instamoon"
+        run: |
+          API_URL="https://api.bitbucket.org/2.0/repositories/$BITBUCKET_WORKSPACE/$BITBUCKET_REPO_SLUG/downloads"
+          RESPONSE=$(curl -s -u "$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD" "$API_URL")
+          FILE_NAME=$(echo "$RESPONSE" | jq -r '.values[0].name')
+          if [[ -n "$FILE_NAME" && "$FILE_NAME" != "null" ]]; then
+            DOWNLOAD_LINK="https://bitbucket.org/$BITBUCKET_WORKSPACE/$BITBUCKET_REPO_SLUG/downloads/$FILE_NAME"
+            echo "UPLOAD_SUCCESS=true" >> $GITHUB_ENV
+            echo "DOWNLOAD_LINK=$DOWNLOAD_LINK" >> $GITHUB_ENV
+          else
+            echo "UPLOAD_SUCCESS=false" >> $GITHUB_ENV
+          fi
+
+      - name: Send Telegram Notification
+        if: env.UPLOAD_SUCCESS == 'true'
+        env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          API_URL="https://api.bitbucket.org/2.0/repositories/$BITBUCKET_WORKSPACE/$BITBUCKET_REPO_SLUG/downloads"
-          
-          # Fetch latest uploaded file details
-          RESPONSE=$(curl -s -u "$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD" "$API_URL")
-          
-          # Extracting latest file name using jq
-          FILE_NAME=$(echo "$RESPONSE" | jq -r '.values[0].name')
-
-          # Generating final download link
-          if [[ "$UPLOAD_SUCCESS" == "true" && -n "$FILE_NAME" && "$FILE_NAME" != "null" ]]; then
-            DOWNLOAD_LINK="https://bitbucket.org/$BITBUCKET_WORKSPACE/$BITBUCKET_REPO_SLUG/downloads/$FILE_NAME"
-            MESSAGE="🚀 *Modified Instagram APK is Ready!*\n\n🔗 [Download Here]($DOWNLOAD_LINK)"
-          else
-            MESSAGE="❌ *Upload Failed!*\n\nPlease check the logs."
-          fi
-
-          echo "📂 Sending Telegram Notification: $MESSAGE"
-
-          # Send Telegram Message
           curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
             -H "Content-Type: application/x-www-form-urlencoded" \
             --data-urlencode "chat_id=$TELEGRAM_CHAT_ID" \
-            --data-urlencode "text=$MESSAGE" \
+            --data-urlencode "text=🚀 *Modified Instagram APK is Ready!*\n\n🔗 [Download Here]($DOWNLOAD_LINK)" \
             --data-urlencode "parse_mode=Markdown"

@@ -1,7 +1,9 @@
 name: Build and Upload Modified Instagram APK
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - InstaMoon  # Jab bhi 'main' branch par push hoga, workflow chalega
 
 jobs:
   build:
@@ -73,8 +75,10 @@ jobs:
         env:
           BITBUCKET_USERNAME: ${{ secrets.BITBUCKET_USERNAME }}
           BITBUCKET_APP_PASSWORD: ${{ secrets.BITBUCKET_APP_PASSWORD }}
+          BITBUCKET_WORKSPACE: "iamzainnnn"
+          BITBUCKET_REPO_SLUG: "instamoon"
         run: |
-          UPLOAD_URL="https://api.bitbucket.org/2.0/repositories/iamzainnnn/instamoon/downloads/"
+          UPLOAD_URL="https://api.bitbucket.org/2.0/repositories/${BITBUCKET_WORKSPACE}/${BITBUCKET_REPO_SLUG}/downloads"
           curl -X POST "$UPLOAD_URL" \
           --user "$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD" \
           --header "Content-Type: multipart/form-data" \
@@ -83,7 +87,7 @@ jobs:
       - name: Extract Download Link
         id: extract_link
         run: |
-          DOWNLOAD_LINK="https://bitbucket.org/iamzainnnn/instamoon/downloads/Instagram_Mod_Aligned.apk"
+          DOWNLOAD_LINK="https://bitbucket.org/${BITBUCKET_WORKSPACE}/${BITBUCKET_REPO_SLUG}/downloads/Instagram_Mod_Aligned.apk"
           echo "DOWNLOAD_LINK=$DOWNLOAD_LINK" >> $GITHUB_ENV
 
       - name: Send Download Link to Telegram

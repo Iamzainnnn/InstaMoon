@@ -75,8 +75,7 @@ jobs:
 
       - name: Send Modified APK to Telegram Group
         run: |
-          curl -F document=@Instagram_Mod_Aligned.apk \
-          "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendDocument?chat_id=${TELEGRAM_CHAT_ID}&caption=✅ Modified Instagram APK is ready! 🚀"
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          curl -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendDocument" \
+          -F chat_id="${TELEGRAM_CHAT_ID}" \
+          -F document="@Instagram_Mod_Aligned.apk" \
+          -F caption="✅ Modified Instagram APK is ready! 🚀"

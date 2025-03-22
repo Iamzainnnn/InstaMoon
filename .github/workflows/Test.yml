@@ -1,17 +1,14 @@
-name: Telegram API Debugging
+name: Test Telegram Bot
 
 on:
   workflow_dispatch:
 
 jobs:
-  debug-telegram:
+  test-telegram:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Setup Environment Variables
+      - name: Check Secrets
         run: |
           echo "Checking if secrets are available..."
           if [[ -z "${TELEGRAM_BOT_TOKEN}" || -z "${TELEGRAM_CHAT_ID}" ]]; then
@@ -19,31 +16,11 @@ jobs:
             exit 1
           fi
           echo "✅ Secrets are set properly."
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
 
       - name: Send Test Message to Telegram
         run: |
-          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+          curl -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
           -H "Content-Type: application/x-www-form-urlencoded" \
           --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
-          --data-urlencode "text=✅ GitHub Actions Test Successful! 🚀" \
+          --data-urlencode "text=✅ Test Message from GitHub Actions 🚀" \
           --data-urlencode "parse_mode=Markdown"
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-
-      - name: Create a Dummy File for Upload Test
-        run: echo "This is a test file." > test_file.txt
-
-      - name: Upload Test File to Telegram
-        run: |
-          curl -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendDocument" \
-          -H "Content-Type: multipart/form-data" \
-          -F "chat_id=${TELEGRAM_CHAT_ID}" \
-          -F "document=@test_file.txt" \
-          -F "caption=📂 Test File Upload Successful!"
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}

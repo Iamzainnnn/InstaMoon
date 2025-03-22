@@ -1,4 +1,4 @@
-name: Build and Upload Instagram Mod
+name: Build and Release Instagram Mod
 
 on:
   workflow_dispatch:
@@ -21,9 +21,6 @@ jobs:
         run: |
           sudo apt update
           sudo apt install -y zipalign wget rsync curl unzip git
-
-      - name: Give Gradle Execute Permission
-        run: chmod +x gradlew
 
       - name: Download APKEditor
         run: |
@@ -72,17 +69,31 @@ jobs:
         run: |
           zipalign -v 4 output/Instagram_Mod.apk output/Instagram_Mod_Aligned.apk
 
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          name: "Instagram Mod Release v1.0.${{ github.run_number }}"
+          body: "🚀 New Instagram Mod APK build is ready!"
+          files: output/Instagram_Mod_Aligned.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Upload APK to Bitbucket
         run: |
           curl -X POST -u "${{ secrets.BITBUCKET_USERNAME }}:${{ secrets.BITBUCKET_APP_PASSWORD }}" \
           --form files=@output/Instagram_Mod_Aligned.apk \
-          "https://api.bitbucket.org/2.0/repositories/${{ secrets.BITBUCKET_USERNAME }}/${{ secrets.BITBUCKET_REPO }}/downloads"
+          "https://api.bitbucket.org/2.0/repositories/${{ secrets.BITBUCKET_WORKSPACE }}/${{ secrets.BITBUCKET_REPO }}/downloads"
 
-      - name: Send Telegram Notification with Bitbucket Link
+      - name: Send Telegram Notification with Release & Bitbucket Links
         run: |
-          BITBUCKET_LINK="https://bitbucket.org/${{ secrets.BITBUCKET_USERNAME }}/${{ secrets.BITBUCKET_REPO }}/downloads/Instagram_Mod_Aligned.apk"
+          GH_RELEASE_LINK="https://github.com/${{ github.repository }}/releases/latest"
+          BITBUCKET_LINK="https://bitbucket.org/${{ secrets.BITBUCKET_WORKSPACE }}/${{ secrets.BITBUCKET_REPO }}/downloads/Instagram_Mod_Aligned.apk"
+
+          MESSAGE="🚀 *Modified Instagram APK is ready!* \n\n🔹 [GitHub Release]($GH_RELEASE_LINK) \n🔹 [Bitbucket Download]($BITBUCKET_LINK)"
+
           curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -H "Content-Type: application/x-www-form-urlencoded" \
             --data-urlencode "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
-            --data-urlencode "text=🚀 *Modified Instagram APK is ready!* \nDownload: [Click Here]($BITBUCKET_LINK)" \
+            --data-urlencode "text=$MESSAGE" \
             --data-urlencode "parse_mode=Markdown"

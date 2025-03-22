@@ -45,7 +45,7 @@ jobs:
 
       - name: Extract Smali & Resources from InstaMoon
         run: |
-          java -jar APKEditor.jar d -i app/build/outputs/apk/debug/app-debug.apk -o InstaMoon_Smali --api 30
+          java -jar APKEditor.jar d -i app/build/outputs/apk/debug/app-debug.apk -o InstaMoon_Smali
 
       - name: Decompile Instagram APK
         run: |

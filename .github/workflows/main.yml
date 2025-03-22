@@ -40,6 +40,10 @@ jobs:
           wget "$LATEST_APKTOOL" -O /usr/local/bin/apktool.jar
           chmod +x /usr/local/bin/apktool.jar
 
+      - name: Download Instagram APK (base.apk)
+        run: |
+          wget -O base.apk "https://pool.apk.aptoide.com/mark8/com-instagram-android-377801080-70229994-9624f50014f00fca9ecf84dd9038587e.apk"
+          
       - name: Grant execute permission to Gradle wrapper
         run: chmod +x ./gradlew
 

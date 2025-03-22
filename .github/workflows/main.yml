@@ -63,5 +63,4 @@ jobs:
             --data-urlencode "chat_id=$TELEGRAM_CHAT_ID" \
             --data-urlencode "text=🚀 *Dummy File Uploaded Successfully!*
 
-🔗 [Download Here]($DOWNLOAD_LINK)" \
-            --data-urlencode "parse_mode=Markdown"
+         

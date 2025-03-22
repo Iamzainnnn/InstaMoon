@@ -1,26 +1,21 @@
-name: Telegram Message Test
-
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - InstaMoon
 
 jobs:
-  test:
+  build:
     runs-on: ubuntu-latest
 
-    steps:
-      - name: Check Secrets
-        run: |
-          echo "Checking if secrets are available..."
-          if [[ -z "${{ secrets.TELEGRAM_BOT_TOKEN }}" || -z "${{ secrets.TELEGRAM_CHAT_ID }}" ]]; then
-            echo "❌ ERROR: Secrets are missing! Please check TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID."
-            exit 1
-          fi
-          echo "✅ Secrets are set properly."
 
-      - name: Send Test Message to Telegram
+      - name: Upload to Bitbucket
+        env:
+          BITBUCKET_USERNAME: ${{ secrets.BITBUCKET_USERNAME }}
+          BITBUCKET_APP_PASSWORD: ${{ secrets.BITBUCKET_APP_PASSWORD }}
+          BITBUCKET_WORKSPACE: "iamzainnnn"
+          BITBUCKET_REPO_SLUG: "instamoon"
         run: |
-          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
-          -H "Content-Type: application/x-www-form-urlencoded" \
-          --data-urlencode "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
-          --data-urlencode "text=✅ *GitHub Actions Test Successful!* 🚀" \
-          --data-urlencode "parse_mode=Markdown"
+curl -s -X POST "https://api.bitbucket.org/2.0/repositories/$BITBUCKET_WORKSPACE/$BITBUCKET_REPO_SLUG/downloads" \
+  --user "$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD" \
+  --header "Content-Type: multipart/form-data" \
+  --form files=@Instagram_Mod_Aligned.apk

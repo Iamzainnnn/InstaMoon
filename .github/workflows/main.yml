@@ -17,10 +17,10 @@ jobs:
       - name: Install Dependencies
         run: sudo apt update && sudo apt install -y curl jq
 
-      - name: Download Instagram APK
-        run: wget -O Instagram_Mod_Aligned.apk "https://pool.apk.aptoide.com/mark8/com-instagram-android-377801080-70229994-9624f50014f00fca9ecf84dd9038587e.apk"
+      - name: Create Dummy File
+        run: echo "This is a test file" > dummy_file.txt
 
-      - name: Upload to Bitbucket
+      - name: Upload Dummy File to Bitbucket
         env:
           BITBUCKET_USERNAME: ${{ secrets.BITBUCKET_USERNAME }}
           BITBUCKET_APP_PASSWORD: ${{ secrets.BITBUCKET_APP_PASSWORD }}
@@ -28,11 +28,11 @@ jobs:
           BITBUCKET_REPO_SLUG: "instamoon"
         run: |
           API_URL="https://api.bitbucket.org/2.0/repositories/$BITBUCKET_WORKSPACE/$BITBUCKET_REPO_SLUG/downloads"
-          echo "Uploading Instagram_Mod_Aligned.apk to Bitbucket..."
+          echo "Uploading dummy_file.txt to Bitbucket..."
           curl -s -X POST "$API_URL" \
             --user "$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD" \
             --header "Content-Type: multipart/form-data" \
-            --form files=@Instagram_Mod_Aligned.apk
+            --form files=@dummy_file.txt
 
       - name: Verify Upload & Get Download Link
         env:
@@ -61,5 +61,7 @@ jobs:
           curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
             -H "Content-Type: application/x-www-form-urlencoded" \
             --data-urlencode "chat_id=$TELEGRAM_CHAT_ID" \
-            --data-urlencode "text=🚀 *Modified Instagram APK is Ready!*\n\n🔗 [Download Here]($DOWNLOAD_LINK)" \
+            --data-urlencode "text=🚀 *Dummy File Uploaded Successfully!*
+
+🔗 [Download Here]($DOWNLOAD_LINK)" \
             --data-urlencode "parse_mode=Markdown"

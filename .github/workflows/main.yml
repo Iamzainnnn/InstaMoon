@@ -20,12 +20,12 @@ jobs:
       - name: Install Dependencies
         run: |
           sudo apt update
-          sudo apt install -y zipalign wget rsync curl unzip git apktool
+          sudo apt install -y zipalign wget rsync curl unzip git
 
       - name: Give Gradle Execute Permission
         run: chmod +x gradlew
 
-      - name: Download APKEditor 1.4.2
+      - name: Download APKEditor
         run: |
           wget -O APKEditor.jar "https://github.com/REAndroid/APKEditor/releases/latest/download/APKEditor-1.4.2.jar"
 
@@ -45,15 +45,15 @@ jobs:
         run: |
           java -jar APKEditor.jar d -i app/build/outputs/apk/debug/app-debug.apk -o InstaMoon_Smali
 
-      - name: Decompile Instagram APK
+      - name: Decompile Instagram APK using APKEditor
         run: |
           java -jar APKEditor.jar d -i base.apk -o Instagram_Smali
 
-      - name: Merge InstaMoon Smali into Instagram using APKTool
+      - name: Merge InstaMoon Smali into Instagram
         run: |
-          cp -r InstaMoon_Smali/smali/* Instagram_Smali/smali/
+          rsync -av InstaMoon_Smali/smali/ Instagram_Smali/smali/
 
-      - name: Recompile Instagram APK using APKEditor
+      - name: Recompile Merged APK using APKEditor
         run: |
           java -jar APKEditor.jar b -i Instagram_Smali -o Instagram_Mod.apk
 
@@ -69,13 +69,13 @@ jobs:
         run: |
           zipalign -v 4 Instagram_Mod.apk Instagram_Mod_Aligned.apk
 
-      - name: Move APK to Artifacts Directory
-        run: |
-          mkdir -p artifacts
-          mv Instagram_Mod_Aligned.apk artifacts/
-
-      - name: Upload Modified Instagram APK
+      - name: Upload Modified Instagram APK as Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Modified-Instagram-APK
-          path: artifacts/Instagram_Mod_Aligned.apk
+          path: Instagram_Mod_Aligned.apk
+
+      - name: Upload Modified Instagram APK to Telegram
+        run: |
+          curl -F document=@Instagram_Mod_Aligned.apk \
+          "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendDocument?chat_id=${{ secrets.TELEGRAM_CHAT_ID }}&caption=Modified Instagram APK is ready! 🚀"

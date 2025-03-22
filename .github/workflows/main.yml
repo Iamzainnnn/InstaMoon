@@ -1,12 +1,12 @@
-name: Build and Upload Modified Instagram APK
+name: Build, Upload & Auto-Cleanup APK
 
 on:
   push:
     branches:
-      - InstaMoon  # Jab bhi 'main' branch par push hoga, workflow chalega
+      - main
 
 jobs:
-  build:
+  build-upload:
     runs-on: ubuntu-latest
 
     steps:
@@ -22,73 +22,44 @@ jobs:
       - name: Install Dependencies
         run: |
           sudo apt update
-          sudo apt install -y zipalign wget rsync curl unzip git
-
-      - name: Give Gradle Execute Permission
-        run: chmod +x gradlew
+          sudo apt install -y zipalign wget curl unzip git jq
 
       - name: Download APKEditor
-        run: |
-          wget -O APKEditor.jar "https://github.com/REAndroid/APKEditor/releases/latest/download/APKEditor-1.4.2.jar"
-
-      - name: Download smali & baksmali (Prebuilt)
-        run: |
-          wget -O smali.jar "https://bitbucket.org/JesusFreke/smali/downloads/smali-2.5.2.jar"
-          wget -O baksmali.jar "https://bitbucket.org/JesusFreke/smali/downloads/baksmali-2.5.2.jar"
+        run: wget -O APKEditor.jar "https://github.com/REAndroid/APKEditor/releases/latest/download/APKEditor-1.4.2.jar"
 
       - name: Download Instagram APK (base.apk)
-        run: |
-          wget -O base.apk "https://pool.apk.aptoide.com/mark8/com-instagram-android-377801080-70229994-9624f50014f00fca9ecf84dd9038587e.apk"
+        run: wget -O base.apk "https://pool.apk.aptoide.com/mark8/com-instagram-android-377801080-70229994-9624f50014f00fca9ecf84dd9038587e.apk"
 
       - name: Build InstaMoon APK
         run: ./gradlew assembleDebug
 
-      - name: Extract Smali & Resources from InstaMoon
+      - name: Merge Smali & Rebuild APK
         run: |
           java -jar APKEditor.jar d -i app/build/outputs/apk/debug/app-debug.apk -o InstaMoon_Smali
-
-      - name: Decompile Instagram APK
-        run: |
           java -jar APKEditor.jar d -i base.apk -o Instagram_Smali
-
-      - name: Merge InstaMoon Smali into Instagram
-        run: |
           rsync -av InstaMoon_Smali/smali/ Instagram_Smali/smali/
-
-      - name: Rebuild Modified Instagram APK
-        run: |
           java -jar APKEditor.jar b -i Instagram_Smali -o Instagram_Mod.apk
 
-      - name: Sign APK with Debug Keystore
+      - name: Sign APK
         run: |
           keytool -genkey -v -keystore debug.keystore -storepass android -keypass android -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
-          jarsigner -verbose -sigalg SHA1withRSA -digestalg SHA1 \
-            -keystore debug.keystore -storepass android \
-            -keypass android \
-            Instagram_Mod.apk androiddebugkey
-
-      - name: Optimize APK (Zipalign)
-        run: |
+          jarsigner -verbose -sigalg SHA1withRSA -digestalg SHA1 -keystore debug.keystore -storepass android -keypass android Instagram_Mod.apk androiddebugkey
           zipalign -v 4 Instagram_Mod.apk Instagram_Mod_Aligned.apk
 
-      - name: Upload to Bitbucket
+      - name: Upload APK to Bitbucket
         env:
           BITBUCKET_USERNAME: ${{ secrets.BITBUCKET_USERNAME }}
           BITBUCKET_APP_PASSWORD: ${{ secrets.BITBUCKET_APP_PASSWORD }}
           BITBUCKET_WORKSPACE: "iamzainnnn"
           BITBUCKET_REPO_SLUG: "instamoon"
         run: |
-          UPLOAD_URL="https://api.bitbucket.org/2.0/repositories/${BITBUCKET_WORKSPACE}/${BITBUCKET_REPO_SLUG}/downloads"
-          curl -X POST "$UPLOAD_URL" \
-          --user "$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD" \
-          --header "Content-Type: multipart/form-data" \
-          --form files=@Instagram_Mod_Aligned.apk | tee upload_response.json
-
-      - name: Extract Download Link
-        id: extract_link
-        run: |
-          DOWNLOAD_LINK="https://bitbucket.org/${BITBUCKET_WORKSPACE}/${BITBUCKET_REPO_SLUG}/downloads/Instagram_Mod_Aligned.apk"
-          echo "DOWNLOAD_LINK=$DOWNLOAD_LINK" >> $GITHUB_ENV
+          UPLOAD_URL="https://api.bitbucket.org/2.0/repositories/$BITBUCKET_WORKSPACE/$BITBUCKET_REPO_SLUG/downloads/"
+          RESPONSE=$(curl -X POST "$UPLOAD_URL" \
+            --user "$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD" \
+            --header "Content-Type: multipart/form-data" \
+            --form files=@Instagram_Mod_Aligned.apk)
+          echo "$RESPONSE" | jq .
+          echo "DOWNLOAD_LINK=https://bitbucket.org/$BITBUCKET_WORKSPACE/$BITBUCKET_REPO_SLUG/downloads/Instagram_Mod_Aligned.apk" >> $GITHUB_ENV
 
       - name: Send Download Link to Telegram
         env:
@@ -96,7 +67,45 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
-          -H "Content-Type: application/x-www-form-urlencoded" \
-          --data-urlencode "chat_id=$TELEGRAM_CHAT_ID" \
-          --data-urlencode "text=🚀 *Modified Instagram APK is Ready!*\n\n🔗 [Download Here]($DOWNLOAD_LINK)" \
-          --data-urlencode "parse_mode=Markdown"
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            --data-urlencode "chat_id=$TELEGRAM_CHAT_ID" \
+            --data-urlencode "text=🚀 *Modified Instagram APK is Ready!*\n\n🔗 [Download Here]($DOWNLOAD_LINK)" \
+            --data-urlencode "parse_mode=Markdown"
+
+  cleanup:
+    needs: build-upload
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check Bitbucket Storage & Delete Old APKs
+        env:
+          BITBUCKET_USERNAME: ${{ secrets.BITBUCKET_USERNAME }}
+          BITBUCKET_APP_PASSWORD: ${{ secrets.BITBUCKET_APP_PASSWORD }}
+          BITBUCKET_WORKSPACE: "iamzainnnn"
+          BITBUCKET_REPO_SLUG: "instamoon"
+        run: |
+          API_URL="https://api.bitbucket.org/2.0/repositories/$BITBUCKET_WORKSPACE/$BITBUCKET_REPO_SLUG/downloads"
+          
+          # Fetch all APK files
+          FILES=$(curl -s -u "$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD" "$API_URL" | jq -r '.values[].name')
+          
+          # Check total storage size
+          TOTAL_SIZE=$(curl -s -u "$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD" "$API_URL" | jq '[.values[].size] | add')
+
+          echo "📂 Total Storage Used: $((TOTAL_SIZE / 1024 / 1024)) MB"
+
+          # If storage exceeds 1GB, delete oldest files
+          if [ $TOTAL_SIZE -gt 1073741824 ]; then
+            echo "⚠️ Storage exceeded 1GB! Deleting old files..."
+            for FILE in $FILES; do
+              echo "🗑 Deleting: $FILE"
+              curl -X DELETE -u "$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD" "$API_URL/$FILE"
+              TOTAL_SIZE=$(curl -s -u "$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD" "$API_URL" | jq '[.values[].size] | add')
+              if [ $TOTAL_SIZE -lt 1073741824 ]; then
+                echo "✅ Storage cleared under 1GB!"
+                break
+              fi
+            done
+          else
+            echo "✅ Storage is under 1GB, no need to delete."
+          fi

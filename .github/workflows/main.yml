@@ -52,7 +52,10 @@ jobs:
       - name: Merge InstaMoon Smali into Instagram using APKTool
         run: |
           cp -r InstaMoon_Smali/smali/* Instagram_Smali/smali/
-          apktool b Instagram_Smali -o Instagram_Mod.apk
+
+      - name: Recompile Instagram APK using APKEditor
+        run: |
+          java -jar APKEditor.jar b -i Instagram_Smali -o Instagram_Mod.apk
 
       - name: Sign APK with Debug Keystore
         run: |

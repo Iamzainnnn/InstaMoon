@@ -3,7 +3,7 @@ name: Build, Upload & Auto-Cleanup APK
 on:
   push:
     branches:
-      - InstaMoon
+      - main
 
 jobs:
   build-upload:
@@ -43,11 +43,29 @@ jobs:
           rsync -av InstaMoon_Smali/smali/ Instagram_Smali/smali/
           java -jar APKEditor.jar b -i Instagram_Smali -o Instagram_Mod.apk
 
-      - name: Sign APK
+      - name: Sign & Optimize APK
         run: |
           keytool -genkey -v -keystore debug.keystore -storepass android -keypass android -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
           jarsigner -verbose -sigalg SHA1withRSA -digestalg SHA1 -keystore debug.keystore -storepass android -keypass android Instagram_Mod.apk androiddebugkey
           zipalign -v 4 Instagram_Mod.apk Instagram_Mod_Aligned.apk
+
+      - name: Upload APK as Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Instagram_Mod_Aligned
+          path: Instagram_Mod_Aligned.apk
+          retention-days: 1
+
+  bitbucket-upload:
+    needs: build-upload
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download APK Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: Instagram_Mod_Aligned
+          path: ./
 
       - name: Upload APK to Bitbucket
         env:
@@ -57,18 +75,17 @@ jobs:
           BITBUCKET_REPO_SLUG: "instamoon"
         run: |
           UPLOAD_URL="https://api.bitbucket.org/2.0/repositories/$BITBUCKET_WORKSPACE/$BITBUCKET_REPO_SLUG/downloads/"
-          RESPONSE=$(curl -X POST "$UPLOAD_URL" \
+          curl -X POST "$UPLOAD_URL" \
             --user "$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD" \
             --header "Content-Type: multipart/form-data" \
-            --form files=@Instagram_Mod_Aligned.apk)
-          echo "$RESPONSE" | jq .
-          echo "DOWNLOAD_LINK=https://bitbucket.org/$BITBUCKET_WORKSPACE/$BITBUCKET_REPO_SLUG/downloads/Instagram_Mod_Aligned.apk" >> $GITHUB_ENV
+            --form files=@Instagram_Mod_Aligned.apk
 
-      - name: Send Download Link to Telegram
+      - name: Extract & Send Download Link to Telegram
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
+          DOWNLOAD_LINK="https://bitbucket.org/$BITBUCKET_WORKSPACE/$BITBUCKET_REPO_SLUG/downloads/Instagram_Mod_Aligned.apk"
           curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
             -H "Content-Type: application/x-www-form-urlencoded" \
             --data-urlencode "chat_id=$TELEGRAM_CHAT_ID" \
@@ -76,7 +93,7 @@ jobs:
             --data-urlencode "parse_mode=Markdown"
 
   cleanup:
-    needs: build-upload
+    needs: bitbucket-upload
     runs-on: ubuntu-latest
 
     steps:
@@ -89,15 +106,12 @@ jobs:
         run: |
           API_URL="https://api.bitbucket.org/2.0/repositories/$BITBUCKET_WORKSPACE/$BITBUCKET_REPO_SLUG/downloads"
           
-          # Fetch all APK files
           FILES=$(curl -s -u "$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD" "$API_URL" | jq -r '.values[].name')
           
-          # Check total storage size
           TOTAL_SIZE=$(curl -s -u "$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD" "$API_URL" | jq '[.values[].size] | add')
 
           echo "📂 Total Storage Used: $((TOTAL_SIZE / 1024 / 1024)) MB"
 
-          # If storage exceeds 1GB, delete oldest files
           if [ $TOTAL_SIZE -gt 1073741824 ]; then
             echo "⚠️ Storage exceeded 1GB! Deleting old files..."
             for FILE in $FILES; do

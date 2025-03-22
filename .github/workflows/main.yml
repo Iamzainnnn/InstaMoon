@@ -26,23 +26,18 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Install APKTool & Dependencies
+      - name: Install Dependencies
         run: |
           sudo apt update
           sudo apt install -y zipalign wget
 
-          # Install APKTool script
-          wget https://raw.githubusercontent.com/iBotPeaches/Apktool/master/scripts/linux/apktool -O /usr/local/bin/apktool
-          chmod +x /usr/local/bin/apktool
-
-          # Download latest APKTool.jar
-          LATEST_APKTOOL=$(curl -s https://api.github.com/repos/iBotPeaches/Apktool/releases/latest | grep "browser_download_url.*apktool_[0-9.]*\\.jar" | cut -d '"' -f 4)
-          wget "$LATEST_APKTOOL" -O /usr/local/bin/apktool.jar
-          chmod +x /usr/local/bin/apktool.jar
-
       - name: Download Instagram APK (base.apk)
         run: |
           wget -O base.apk "https://pool.apk.aptoide.com/mark8/com-instagram-android-377801080-70229994-9624f50014f00fca9ecf84dd9038587e.apk"
+
+      - name: Download APKEditor
+        run: |
+          wget -O APKEditor.jar "https://github.com/REAndroid/APKEditor/releases/latest/download/APKEditor.jar"
 
       - name: Grant execute permission to Gradle wrapper
         run: chmod +x ./gradlew
@@ -52,11 +47,11 @@ jobs:
 
       - name: Extract Smali Code from InstaMoon
         run: |
-          apktool d -f --no-res -o InstaMoon_Smali app/build/outputs/apk/debug/app-debug.apk
+          java -jar APKEditor.jar d -f -o InstaMoon_Smali app/build/outputs/apk/debug/app-debug.apk
 
       - name: Decompile Instagram APK (Without Resources)
         run: |
-          apktool d -f --no-res -o Instagram_Smali base.apk
+          java -jar APKEditor.jar d -f -o Instagram_Smali base.apk
 
       - name: Merge InstaMoon Smali into Instagram
         run: |
@@ -64,7 +59,7 @@ jobs:
 
       - name: Rebuild Modified Instagram APK
         run: |
-          apktool b Instagram_Smali -o Instagram_Mod.apk
+          java -jar APKEditor.jar b Instagram_Smali -o Instagram_Mod.apk
 
       - name: Generate Debug Keystore
         run: |

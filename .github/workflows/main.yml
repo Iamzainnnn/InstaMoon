@@ -1,16 +1,16 @@
 name: Build Modified Instagram APK
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:  # Manually trigger karne ke liye
   push:
     branches:
-      - main
+      - main  # Make sure yeh tumhare default branch se match kare
   pull_request:
     branches:
       - main
 
 permissions:
-  contents: write
+  contents: write  # Forked repos me workflows enable karne ke liye zaroori hai
 
 jobs:
   build:
@@ -29,10 +29,16 @@ jobs:
       - name: Install APKTool & Dependencies
         run: |
           sudo apt update
-          sudo apt install -y zipalign
+          sudo apt install -y zipalign wget
+          
+          # APKTool script install
           wget https://raw.githubusercontent.com/iBotPeaches/Apktool/master/scripts/linux/apktool -O /usr/local/bin/apktool
           chmod +x /usr/local/bin/apktool
-          wget https://raw.githubusercontent.com/iBotPeaches/Apktool/master/scripts/linux/apktool.jar -O /usr/local/bin/apktool.jar
+
+          # Latest APKTool.jar download
+          LATEST_APKTOOL=$(curl -s https://api.github.com/repos/iBotPeaches/Apktool/releases/latest | grep "browser_download_url.*apktool_[0-9.]*\\.jar" | cut -d '"' -f 4)
+          wget "$LATEST_APKTOOL" -O /usr/local/bin/apktool.jar
+          chmod +x /usr/local/bin/apktool.jar
 
       - name: Grant execute permission to Gradle wrapper
         run: chmod +x ./gradlew
@@ -76,4 +82,3 @@ jobs:
         with:
           name: Modified-Instagram-APK
           path: Instagram_Mod_Aligned.apk
-          

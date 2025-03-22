@@ -74,7 +74,7 @@ jobs:
           BITBUCKET_USERNAME: ${{ secrets.BITBUCKET_USERNAME }}
           BITBUCKET_APP_PASSWORD: ${{ secrets.BITBUCKET_APP_PASSWORD }}
         run: |
-          UPLOAD_URL="https://api.bitbucket.org/2.0/repositories/YOUR_USERNAME/YOUR_REPO/downloads/"
+          UPLOAD_URL="https://api.bitbucket.org/2.0/repositories/iamzainnnn/instamoon/downloads/"
           curl -X POST "$UPLOAD_URL" \
           --user "$BITBUCKET_USERNAME:$BITBUCKET_APP_PASSWORD" \
           --header "Content-Type: multipart/form-data" \
